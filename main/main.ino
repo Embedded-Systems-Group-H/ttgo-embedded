@@ -8,28 +8,97 @@ static TFT_eSPI* tft = nullptr;
 static Buzzer* buzzer = nullptr;
 static TinyGPSPlus* gps = nullptr;
 static Adafruit_DRV2605* drv = nullptr;
-HardwareSerial *GNSS = NULL;
+static BMA* sensor = nullptr;
+static HardwareSerial* GNSS = nullptr;
 
 TFT_eSprite *sprite_Time = nullptr;
 TFT_eSprite *sprite_Location = nullptr;
 TFT_eSprite *sprite_Coordinate = nullptr;
+TFT_eSprite *sprite_StepCount = nullptr;
 
-void pressed(){
-    drv->setWaveform(0, 75);
-    drv->setWaveform(1, 0);
-    drv->go();
+static bool pmu_irq = false;
+static bool step_irq = false;
+static bool doClearScreen = false;
+static bool touched = false;
+static bool touchedJustNow = false;
+static char buf[128];
+static char gpsBuf[128];
+static char gpsTimeBuf[128];
+static char stepBuf[128];
+
+struct{
+    int stepCount = 0;
+} session;
+
+struct Button{
+  unsigned x1, y1, x2, y2;
+  TFT_eSprite* sprite;
+  void(*function)();
+  char text[16];
+};
+
+void start_session(){
 }
 
-void released(){
-    drv->setWaveform(0, 75);
-    drv->setWaveform(1, 0);
-    drv->go();
+void end_session(){
 }
+
+// void send_gps(){
+// }
+
+static Button b1 = Button{
+  .x1 = 10,
+  .y1 = 100,
+  .x2 = 240/3 - 3,
+  .y2 = 160,
+  .sprite = nullptr,
+  .function = start_session,
+  // .text = "Test button    "
+  .text = "Start          "
+};
+
+static Button b2 = Button{
+  .x1 = 240/3 + 3,
+  .y1 = 100,
+  .x2 = 2*240/3 - 3,
+  .y2 = 160,
+  .sprite = nullptr,
+  .function = end_session,
+  // .text = "Test button    "
+  .text = "End            "
+};
+
+static const int buttonCount = 2;
+static Button* buttons[] = {&b1, &b2};
 
 void clearScreen(){
     tft->fillScreen(TFT_BLACK);
     tft->setCursor(0, 0);
-    tft->println("Testing program");
+    tft->println("Demo program");
+
+    for(int i=0; i<buttonCount; i++){
+        auto b = buttons[i];
+        b->sprite->fillSprite(TFT_BLUE);
+        b->sprite->setTextColor(TFT_BLACK);
+        b->sprite->setCursor(0, 0);
+        b->sprite->print(b->text);
+        b->sprite->pushSprite(b->x1, b->y1);
+    }
+}
+
+bool insideButton(Button* b, uint16_t x, uint16_t y){
+    return b->x1 <= x && b->x2 > x && b->y1 <= y && b->y2 > y;
+}
+
+void handleEvent(uint16_t x, uint16_t y){
+    for(int i=0; i<buttonCount; i++){
+        auto b = buttons[i];
+        if(insideButton(b, x, y)){
+            if(b->function){
+                b->function();
+            }
+        }
+    }
 }
 
 bool Quectel_L76X_Probe(){
@@ -97,39 +166,76 @@ void setup(){
     sprite_Time = new TFT_eSprite(tft);
     sprite_Location = new TFT_eSprite(tft);
     sprite_Coordinate = new TFT_eSprite(tft);
+    sprite_StepCount = new TFT_eSprite(tft);
 
-    sprite_Time->createSprite(240, 48);
+    sprite_Time->createSprite(240, 24);
     sprite_Time->setTextFont(2);
-    sprite_Location->createSprite(240, 48);
+    sprite_Location->createSprite(240, 24);
     sprite_Location->setTextFont(2);
-    sprite_Coordinate->createSprite(240, 48);
+    sprite_Coordinate->createSprite(240, 24);
     sprite_Coordinate->setTextFont(2);
+    sprite_StepCount->createSprite(240, 48);
+    sprite_StepCount->setTextFont(4);
 
-    ttgo->button->setPressedHandler(pressed);
-    ttgo->button->setReleasedHandler(released);
+    for(int i=0; i<buttonCount; i++){
+        auto b = buttons[i];    
+        b->sprite = new TFT_eSprite(tft);
+        b->sprite->createSprite(b->x2-b->x1, b->y2-b->y1);
+        b->sprite->setTextFont(2);
+    }
+
+    pinMode(AXP202_INT, INPUT);
+    attachInterrupt(AXP202_INT, []{
+        pmu_irq = true;
+    }, FALLING);
+
+    // ttgo->power->adc1Enable(AXP202_BATT_CUR_ADC1 | AXP202_BATT_VOL_ADC1 |
+    //                         AXP202_VBUS_VOL_ADC1 | AXP202_VBUS_CUR_ADC1,
+    //                         true);
+    ttgo->power->enableIRQ(AXP202_VBUS_REMOVED_IRQ | AXP202_VBUS_CONNECT_IRQ |
+                            AXP202_BATT_REMOVED_IRQ | AXP202_BATT_CONNECT_IRQ |
+                            AXP202_PEK_LONGPRESS_IRQ | AXP202_PEK_SHORTPRESS_IRQ,
+                            true);
+    ttgo->power->clearIRQ();
+
+    sensor = ttgo->bma;
+
+    Acfg cfg;
+    cfg.odr = BMA4_OUTPUT_DATA_RATE_100HZ;
+    cfg.range = BMA4_ACCEL_RANGE_2G;
+    cfg.bandwidth = BMA4_ACCEL_NORMAL_AVG4;
+    cfg.perf_mode = BMA4_CONTINUOUS_MODE;
+    sensor->accelConfig(cfg);
+    sensor->enableAccel();
+    pinMode(BMA423_INT1, INPUT);
+    attachInterrupt(BMA423_INT1, [] {
+        step_irq = 1;
+    }, RISING);
+    sensor->enableFeature(BMA423_STEP_CNTR, true);
+    sensor->resetStepCounter();
+    sensor->enableStepCountInterrupt();
 
     clearScreen();
 }
 
-char buf[128];
-char gpsBuf[128];
-char gpsTimeBuf[128];
-
 void loop(){
     while(GNSS->available()) {
         int r = GNSS->read();
-        Serial.write(r);
+        // Serial.write(r);
         gps->encode(r);
     }
     
-    bool doClearScreen = false;
     int16_t x, y;
-    doClearScreen = doClearScreen || (bool)ttgo->getTouch(x, y);
-    doClearScreen = doClearScreen || (bool)gps->location.isUpdated();
+    bool touched2 = ttgo->getTouch(x, y);
+    touchedJustNow = !touched && touched2;
+    touched = touched2;
+    // doClearScreen = doClearScreen || (bool)ttgo->getTouch(x, y);
+    // doClearScreen = doClearScreen || (bool)gps->location.isUpdated();
 
-    doClearScreen = false;
+    // doClearScreen = false;
     if(doClearScreen){
         clearScreen();
+        doClearScreen = false;
     }
 
     if (gps->location.isUpdated()) {
@@ -154,7 +260,7 @@ void loop(){
         // ttgo->tft->drawString(gpsTimeBuf, 10, 40);
     }
 
-    if (ttgo->getTouch(x, y)) {
+    if (touched) {
         sprintf(buf, "x=%03d  y=%03d", x, y);
 
         sprite_Coordinate->fillSprite(TFT_BLACK);
@@ -162,11 +268,53 @@ void loop(){
         sprite_Coordinate->setCursor(0, 0);
         sprite_Coordinate->print(buf);
         sprite_Coordinate->pushSprite(240/3, 240 - 43);
-
         // ttgo->tft->drawString(buf, x, y);
+    }
+
+    if(touchedJustNow){
+        handleEvent(x, y);
+
         drv->setWaveform(0, 75);
         drv->setWaveform(1, 0);
         drv->go();
     }
+
+    if(pmu_irq){
+      pmu_irq = false;
+      ttgo->power->readIRQ();
+      if (ttgo->power->isPEKShortPressIRQ()) {
+          drv->setWaveform(0, 75);
+          drv->setWaveform(1, 0);
+          drv->go();
+
+          if (ttgo->bl->isOn()) {
+              ttgo->closeBL();
+          } else {
+              ttgo->openBL();
+              doClearScreen = true;
+          }
+          ttgo->power->clearIRQ();
+      }
+    }
+
+    if(step_irq) {
+        step_irq = false;
+        bool rlst;
+        do {
+            rlst =  sensor->readInterrupt();
+        } while (!rlst);
+
+        if (sensor->isStepCounter()) {
+            session.stepCount = sensor->getCounter();
+            sprintf(stepBuf, "Step Count: %05d", session.stepCount);
+            sprite_StepCount->fillSprite(TFT_BLACK);
+            sprite_StepCount->setTextColor(TFT_WHITE);
+            sprite_StepCount->setCursor(0, 0);
+            sprite_StepCount->print(stepBuf);
+            // sprite_StepCount->pushSprite(240/2, 0);
+            sprite_StepCount->pushSprite(0, 0);
+        }
+    }
+
     // delay(5);
 }
