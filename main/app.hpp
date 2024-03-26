@@ -13,7 +13,7 @@ public:
     void Update();
 
 private:
-    void clearScreen();
+    void ClearScreen();
 
     int buttonCount_;
     Button** buttons_;
@@ -23,11 +23,13 @@ private:
 
     Sprite* spriteTime_ = nullptr;
     Sprite* spriteLocation_ = nullptr;
-    Sprite* spriteCoordinate_ = nullptr;
+    Sprite* spriteLogo_ = nullptr;
     Sprite* spriteStepCount_ = nullptr;
     Sprite* spriteWiFi_ = nullptr;
 
     WatchInterface* watch_ = nullptr;
+
+    bool paused_ = false;
 
 private:
     void TouchCallback(uint16_t x, uint16_t y);
@@ -39,6 +41,7 @@ private:
 
     bool StartSession();
     bool EndSession();
+    bool PauseSession();
     bool SendGps(double lat, double lng);
     bool SendStepCount(uint32_t stepCount);
 

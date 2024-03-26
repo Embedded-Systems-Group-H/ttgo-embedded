@@ -8,11 +8,14 @@ static char buffer[128];
 
 struct{
     String sessionId;
+    int latestStepCount = 0;
+    int startStepCount = 0;
 } static session;
 
 bool App::StartSession(){
     session.sessionId = String(now());
     String url = base_url + String("session_start/") + session.sessionId;
+    session.startStepCount = session.latestStepCount;
     return watch_->GetWirelessInterface()->HttpPost(url.c_str());
 }
 
@@ -65,38 +68,48 @@ void App::Init() {
     auto tft = watch_->GetTFT();
     spriteCount_ = 5;
     sprites_ = new Sprite*[spriteCount_];
-    sprites_[0] = new Sprite(0, 0*24, 240, 1*24, new TFT_eSprite(tft), TFT_WHITE, TFT_BLACK, 2);
-    sprites_[1] = new Sprite(0, 1*24, 240, 2*24, new TFT_eSprite(tft), TFT_WHITE, TFT_BLACK, 2);
-    sprites_[2] = new Sprite(0, 2*24, 240, 3*24, new TFT_eSprite(tft), TFT_WHITE, TFT_BLACK, 2);
-    sprites_[3] = new Sprite(0, 3*24, 240, 4*24, new TFT_eSprite(tft), TFT_WHITE, TFT_BLACK, 2);
-    sprites_[4] = new Sprite(0, 4*24, 240, 5*24, new TFT_eSprite(tft), TFT_WHITE, TFT_BLACK, 2);
 
-    spriteTime_ = sprites_[0];
-    spriteLocation_ = sprites_[1];
-    spriteCoordinate_ = sprites_[2];
-    spriteStepCount_ = sprites_[3];
-    spriteWiFi_ = sprites_[4];
+    spriteTime_ =           sprites_[0] = new Sprite(0, 2*24, 120, 3*24, new TFT_eSprite(tft), TFT_BLACK, TFT_WHITE, 2);
+    spriteWiFi_ =           sprites_[4] = new Sprite(120, 2*24, 240, 3*24, new TFT_eSprite(tft), TFT_BLACK, TFT_WHITE, 2);
+    spriteLocation_ =       sprites_[1] = new Sprite(0, 3*24, 240, 4*24, new TFT_eSprite(tft), TFT_BLACK, TFT_WHITE, 2);
+    spriteLogo_ =           sprites_[2] = new Sprite(70, 0*24, 240, 2*24, new TFT_eSprite(tft), TFT_BLACK, TFT_WHITE, 4);
+    spriteStepCount_ =      sprites_[3] = new Sprite(40, 5*24, 240, 7*24, new TFT_eSprite(tft), TFT_BLACK, TFT_WHITE, 4);
 
-    buttonCount_ = 2;
+    spriteTime_->SetText("Time: ", 0);
+    spriteLocation_->SetText("Location: ", 0);
+    spriteLogo_->SetText("Lily run", 0);
+    spriteStepCount_->SetText("Steps: ", 0);
+    spriteWiFi_->SetText("WiFi: ", 0);
+
+    spriteTime_->AddTextPiece("", TFT_WHITE, TFT_BLACK);
+    spriteLocation_->AddTextPiece("NO SIGNAL", TFT_RED, TFT_WHITE);
+    spriteStepCount_->AddTextPiece("0000", TFT_BLUE, TFT_WHITE);
+    spriteWiFi_->AddTextPiece("Disconnected", TFT_GREEN, TFT_BLACK);
+
+    buttonCount_ = 3;
     buttons_ = new Button*[buttonCount_];
 
-    buttons_[0] = new Button(10, 120, 240/3 - 3, 180, new TFT_eSprite(tft), "Start", TFT_WHITE, TFT_BLUE, []() -> bool { return g_App->StartSession(); });
-    buttons_[1] = new Button(240/3 + 3, 120, 2*240/3 - 3, 180, new TFT_eSprite(tft), "End", TFT_WHITE, TFT_BLUE, []() -> bool { return g_App->EndSession(); });
+    buttons_[0] = new Button(10, 170, 240/3 - 3, 230, new TFT_eSprite(tft), "Start", TFT_WHITE, TFT_BLUE, []() -> bool { return g_App->StartSession(); });
+    buttons_[1] = new Button(2*240/3 + 3, 170, 240 - 3, 230, new TFT_eSprite(tft), "End", TFT_WHITE, TFT_BLUE, []() -> bool { return g_App->EndSession(); });
+    buttons_[2] = new Button(240/3 + 3, 170, 2*240/3 - 3, 230, new TFT_eSprite(tft), "Pause", TFT_WHITE, TFT_BLUE, []() -> bool { return g_App->PauseSession(); });
+
+    ClearScreen();
 }
 
 App::App() {
 }
 
 void App::TouchCallback(uint16_t x, uint16_t y) {
+    watch_->VibrateOnce();
+
     bool result = false;
     for(int i=0; i<buttonCount_ && !result; i++){
         result = buttons_[i]->HandleEvent(x, y);
     }
 
-    sprintf(buffer, "x=%03d  y=%03d", x, y);
-    sprite_Coordinate->Render(buffer);
-
-    watch_->VibrateOnce();
+    // sprintf(buffer, "x=%03d  y=%03d", x, y);
+    // spriteLogo_->SetText(buffer, 1);
+    // spriteLogo_->Render();
 }
 
 void App::ButtonCallback() {
@@ -107,42 +120,48 @@ void App::ButtonCallback() {
     }
     else{
         watch_->SetScreen(true);
-        clearScreen();
+        ClearScreen();
     }
 }
 
 void App::StepCountCallback(uint32_t stepCount) {
-    sprintf(buffer, "Step Count: %05d", stepCount);
-    sprite_StepCount->Render(buffer);
-    send_step_count();
+    sprintf(buffer, "%05d", stepCount);
+    spriteStepCount_->SetText(buffer, 1);
+    spriteStepCount_->Render();
+    session.latestStepCount = session.latestStepCount;
+    if(!paused_)
+        SendStepCount(stepCount - session.startStepCount);
 }
 
 void App::GpsCallback(bool isValid, double lat, double lng) {
     if(isValid){
-        sprintf(buffer, "Location: lat %.6f long %.6f", lat, lng);
+        sprintf(buffer, "lat %.6f long %.6f", lat, lng);
     }
     else{
-        sprintf(buffer, "Location: No Signal");
+        sprintf(buffer, "No Signal");
     }
-    spriteLocation_->Render(buffer);
+    spriteLocation_->SetText(buffer, 1);
+    spriteLocation_->Render();
 
-    if(isValid){
-        send_gps(lat, lng);
+    if(isValid && !paused_){
+        SendGps(lat, lng);
     }
 }
 
 void App::WifiStatusCallback(bool isConnected) {
-    sprintf(buffer, "Wifi status: %s", (isConnected ? "Connected" : "Disconnected"));
-    spriteWiFi_->Render(buffer);
+    sprintf(buffer, "%s", (isConnected ? "Connected" : "Disconnected"));
+    spriteWiFi_->SetText(buffer, 1);
+    spriteWiFi_->Render();
 }
 
 void App::TimeUpdatedCallback(GpsTime gpsTime) {
-    sprintf(buffer, "Time: %02d:%02d:%02d", hour(), minute(), second());
-    spriteTime_->Render(buffer);
+    sprintf(buffer, "%02d:%02d:%02d", hour(), minute(), second());
+    spriteTime_->SetText(buffer, 1);
+    spriteTime_->Render();
 }
 
-void App::clearScreen() {
-    watch_->GetTFT()->fillScreen(TFT_BLACK);
+void App::ClearScreen() {
+    watch_->GetTFT()->fillScreen(TFT_WHITE);
     watch_->GetTFT()->setCursor(0, 0);
 
     for(int i=0; i<buttonCount_; i++){
@@ -150,10 +169,20 @@ void App::clearScreen() {
         b->Render();
     }
 
-    sprintf(buffer, "Location: INVALID");
-    spriteLocation_->Render(buffer);
+    for(int i=0; i<spriteCount_; i++){
+        auto s = sprites_[i];
+        s->Render();
+    }
+
+    // sprintf(buffer, "INVALID");
+    // spriteLocation_->Render();
 }
 
 void App::Update() {
     watch_->Update();    
+}
+
+bool App::PauseSession() {
+    paused_ != paused_;
+    buttons_[2]->SetText(paused_ ? "Unpause" : "Pause");
 }

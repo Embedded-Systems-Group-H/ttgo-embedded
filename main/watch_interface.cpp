@@ -20,7 +20,7 @@ void WatchInterface::SetStepCountCallback(void(*stepCountCallback)(uint32_t)){
     stepCountCallback_ = stepCountCallback;
 }
 
-void WatchInterface::SetGpsCallback(void(*gpsCallback)(double, double)){
+void WatchInterface::SetGpsCallback(void(*gpsCallback)(bool, double, double)){
     gpsCallback_ = gpsCallback;
 }
 

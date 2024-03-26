@@ -11,8 +11,13 @@ public:
     bool HandleEvent(uint16_t x, uint16_t y);
     bool InsideButton(uint16_t x, uint16_t y) const;
 
+    virtual void Render() override;
+
 protected:
     bool(*function_)();
+
+    inline static uint8_t buttonOffset_[2] = {3, 20};
+
 };
 
 #endif // __BUTTON_H__
