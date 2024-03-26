@@ -38,43 +38,6 @@ struct{
     int stepCount = 0;
 } session;
 
-// struct Button{
-//   unsigned x1, y1, x2, y2;
-//   TFT_eSprite* sprite;
-//   uint16_t bgColor;
-//   uint16_t textColor;
-//   void(*function)();
-//   char text[16];
-// };
-
-
-
-// static Button b1 = Button{
-//   .x1 = 10,
-//   .y1 = 100,
-//   .x2 = 240/3 - 3,
-//   .y2 = 160,
-//   .sprite = nullptr,
-//   .bgColor = TFT_BLUE,
-//   .textColor = TFT_WHITE,
-//   .function = start_session,
-//   // .text = "Test button    "
-//   .text = "Start\0         "
-// };
-
-// static Button b2 = Button{
-//   .x1 = 240/3 + 3,
-//   .y1 = 100,
-//   .x2 = 2*240/3 - 3,
-//   .y2 = 160,
-//   .sprite = nullptr,
-//   .bgColor = TFT_BLUE,
-//   .textColor = TFT_WHITE,
-//   .function = end_session,
-//   // .text = "Test button    "
-//   .text = "End\0           "
-// };
-
 time_t unixTimestamp() {
     return now();
 }

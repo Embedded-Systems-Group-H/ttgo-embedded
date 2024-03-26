@@ -8,7 +8,7 @@ public:
     Button(unsigned x1, unsigned y1, unsigned x2, unsigned y2, TFT_eSprite* sprite, const char* text, uint16_t fgColor, uint16_t bgColor, bool(*function)() = nullptr);
 
     void Render();
-    bool HandleEvent(uint16_t mouseX, uint16_t mouseY);
+    bool HandleEvent(uint16_t x, uint16_t y);
     bool InsideButton(uint16_t x, uint16_t y) const;
 
 private:
