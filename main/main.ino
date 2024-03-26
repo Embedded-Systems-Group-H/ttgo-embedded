@@ -14,12 +14,6 @@ static Adafruit_DRV2605* drv = nullptr;
 static BMA* sensor = nullptr;
 static HardwareSerial* GNSS = nullptr;
 
-// TFT_eSprite *sprite_Time = nullptr;
-// TFT_eSprite *sprite_Location = nullptr;
-// TFT_eSprite *sprite_Coordinate = nullptr;
-// TFT_eSprite *sprite_StepCount = nullptr;
-// TFT_eSprite *sprite_WiFi = nullptr;
-
 Sprite* sprite_Time = nullptr;
 Sprite* sprite_Location = nullptr;
 Sprite* sprite_Coordinate = nullptr;
@@ -87,7 +81,7 @@ bool send_step_count(){
     payload = payload + "&" + stepCount;
     String url = base_url + String("step_count/") + sessionId;
     url += String("?") + payload;
-    return wireless.HttpPost(url.c_str(), payload.c_str());
+    return wireless.HttpPost(url.c_str());
 }
 
 static const int buttonCount = 2;
@@ -182,17 +176,11 @@ void setup(){
     tft->fillScreen(TFT_RED);
     tft->setCursor(0, 0);
 
-    g_Sprites[0] = new Sprite(0, 0*43, 240, 1*43, new TFT_eSprite(tft), TFT_WHITE, TFT_BLACK, 2);
-    g_Sprites[1] = new Sprite(0, 1*43, 240, 2*43, new TFT_eSprite(tft), TFT_WHITE, TFT_BLACK, 2);
-    g_Sprites[2] = new Sprite(0, 2*43, 240, 3*43, new TFT_eSprite(tft), TFT_WHITE, TFT_BLACK, 2);
-    g_Sprites[3] = new Sprite(0, 3*43, 240, 4*43, new TFT_eSprite(tft), TFT_WHITE, TFT_BLACK, 2);
-    g_Sprites[4] = new Sprite(0, 4*43, 240, 5*43, new TFT_eSprite(tft), TFT_WHITE, TFT_BLACK, 2);
-
-    // sprite_Time = new TFT_eSprite(tft);
-    // sprite_Location = new TFT_eSprite(tft);
-    // sprite_Coordinate = new TFT_eSprite(tft);
-    // sprite_StepCount = new TFT_eSprite(tft);
-    // sprite_WiFi = new TFT_eSprite(tft);
+    g_Sprites[0] = new Sprite(0, 0*24, 240, 1*24, new TFT_eSprite(tft), TFT_WHITE, TFT_BLACK, 2);
+    g_Sprites[1] = new Sprite(0, 1*24, 240, 2*24, new TFT_eSprite(tft), TFT_WHITE, TFT_BLACK, 2);
+    g_Sprites[2] = new Sprite(0, 2*24, 240, 3*24, new TFT_eSprite(tft), TFT_WHITE, TFT_BLACK, 2);
+    g_Sprites[3] = new Sprite(0, 3*24, 240, 4*24, new TFT_eSprite(tft), TFT_WHITE, TFT_BLACK, 2);
+    g_Sprites[4] = new Sprite(0, 4*24, 240, 5*24, new TFT_eSprite(tft), TFT_WHITE, TFT_BLACK, 2);
 
     sprite_Time = g_Sprites[0];
     sprite_Location = g_Sprites[1];
@@ -200,19 +188,8 @@ void setup(){
     sprite_StepCount = g_Sprites[3];
     sprite_WiFi = g_Sprites[4];
 
-    // sprite_Time->createSprite(120, 24);
-    // sprite_Time->setTextFont(2);
-    // sprite_Location->createSprite(240, 24);
-    // sprite_Location->setTextFont(2);
-    // sprite_Coordinate->createSprite(240, 24);
-    // sprite_Coordinate->setTextFont(2);
-    // sprite_StepCount->createSprite(240, 48);
-    // sprite_StepCount->setTextFont(4);
-    // sprite_WiFi->createSprite(120, 24);
-    // sprite_WiFi->setTextFont(2);
-
-    buttons[0] = new Button(10, 100, 240/3 - 3, 160, new TFT_eSprite(tft), "Start", TFT_WHITE, TFT_BLUE, start_session);
-    buttons[1] = new Button(10, 100, 240/3 - 3, 160, new TFT_eSprite(tft), "Start", TFT_WHITE, TFT_BLUE, end_session);
+    buttons[0] = new Button(10, 120, 240/3 - 3, 180, new TFT_eSprite(tft), "Start", TFT_WHITE, TFT_BLUE, start_session);
+    buttons[1] = new Button(240/3 + 3, 120, 2*240/3 - 3, 180, new TFT_eSprite(tft), "End", TFT_WHITE, TFT_BLUE, end_session);
 
     pinMode(AXP202_INT, INPUT);
     attachInterrupt(AXP202_INT, []{
@@ -275,13 +252,7 @@ void loop(){
         sprintf(gpsBuf, "Location: lat %.6f long %.6f", gps->location.lat(), gps->location.lng());
         
         sprite_Location->Render(gpsBuf);
-
-        // sprite_Location->fillSprite(TFT_BLACK);
-        // sprite_Location->setTextColor(TFT_GREEN);
-        // sprite_Location->setCursor(0, 0);
-        // sprite_Location->print(gpsBuf);
         // sprite_Location->pushSprite(0, 43 + 25);
-
         send_gps();
     }
 

@@ -10,7 +10,6 @@ public:
 
     virtual void Render(const char* text);
     virtual void Render();
-    // void SetPosition(uint16_t x, uint16_t y);
     void SetText(const char* text);
 
 protected:
