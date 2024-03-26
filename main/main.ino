@@ -3,7 +3,7 @@
 #define LILYGO_WATCH_2020_V2
 #include <LilyGoWatch.h>
 #include "config.hpp"
-#include <ctime>
+#include <TimeLib.h>
 
 static TTGOClass* ttgo = nullptr;
 static TFT_eSPI* tft = nullptr;
@@ -30,6 +30,8 @@ static char gpsTimeBuf[128];
 static char stepBuf[128];
 static char wifiBuf[128];
 
+const int UTC_offset = 2;
+
 struct{
     int stepCount = 0;
 } session;
@@ -42,6 +44,7 @@ struct Button{
 };
 
 time_t unixTimestamp() {
+    return now();
     struct tm t;
     // Adjust the year (tm_year is years since 1900)
     t.tm_year = gps->date.year() - 1900;
@@ -282,7 +285,7 @@ void setup(){
                             AXP202_PEK_LONGPRESS_IRQ | AXP202_PEK_SHORTPRESS_IRQ,
                             true);
     ttgo->power->clearIRQ();
-
+    
     sensor = ttgo->bma;
 
     Acfg cfg;
@@ -304,11 +307,12 @@ void setup(){
 
     clearScreen();
 
-    setenv("TZ", "GMT2", 1);
-    tzset();
-
     delay(2000);
 }
+
+struct{
+  int year=2000, month=1, day=1, hour=0, minute=0, second=0;
+} gpsTime;
 
 void loop(){
     while(GNSS->available()) {
@@ -343,16 +347,33 @@ void loop(){
         send_gps();
     }
 
-    if (gps->time.isUpdated()) {
-        // setTime(gps->time.hour(), gps->time.minute(), gps->time.second(), gps->date.day(), gps->date.month(), gps->date.year());
-        // adjustTime(UTC_offset * SECS_PER_HOUR);
+    bool dateUpdated = gps->date.isUpdated();
+    bool timeUpdated = gps->date.isUpdated();
+    bool datetimeUpdated = dateUpdated || timeUpdated;
 
-        // Serial.print(gps->date.year());
-        // Serial.print(gps->date.month());
-        // Serial.println(gps->date.day());
-        Serial.println(unixTimestamp());
+    if(dateUpdated){
+        gpsTime.year = gps->date.year();
+        gpsTime.month = gps->date.month();
+        gpsTime.day = gps->date.day();
+    }
 
-        sprintf(gpsTimeBuf, "Time: %02d:%02d:%02d", gps->time.hour(), gps->time.minute(), gps->time.second());
+    if(timeUpdated){
+        gpsTime.hour = gps->time.hour();
+        gpsTime.minute = gps->time.minute();
+        gpsTime.second = gps->time.second();
+    }
+
+    if(datetimeUpdated){
+        setTime(gpsTime.hour, gpsTime.minute, gpsTime.second, gpsTime.day, gpsTime.month, gpsTime.year);
+        adjustTime(UTC_offset * SECS_PER_HOUR);
+        
+        Serial.print(hour());
+        Serial.print(":");
+        Serial.print(minute());
+        Serial.print(":");
+        Serial.println(second());
+
+        sprintf(gpsTimeBuf, "Time: %02d:%02d:%02d", gpsTime.hour, gpsTime.minute, gpsTime.second);
         // sprintf(gpsTimeBuf, "%d", gps->time.value());
 
         sprite_Time->fillSprite(TFT_BLACK);
@@ -360,7 +381,6 @@ void loop(){
         sprite_Time->setCursor(0, 0);
         sprite_Time->print(gpsTimeBuf);
         sprite_Time->pushSprite(0, 43);
-        // ttgo->tft->drawString(gpsTimeBuf, 10, 40);
     }
 
     if (touched) {
