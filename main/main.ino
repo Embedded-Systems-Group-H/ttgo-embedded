@@ -39,6 +39,8 @@ struct{
 struct Button{
   unsigned x1, y1, x2, y2;
   TFT_eSprite* sprite;
+  uint16_t bgColor;
+  uint16_t textColor;
   void(*function)();
   char text[16];
 };
@@ -113,9 +115,11 @@ static Button b1 = Button{
   .x2 = 240/3 - 3,
   .y2 = 160,
   .sprite = nullptr,
+  .bgColor = TFT_BLUE,
+  .textColor = TFT_WHITE,
   .function = start_session,
   // .text = "Test button    "
-  .text = "Start          "
+  .text = "Start\0         "
 };
 
 static Button b2 = Button{
@@ -124,9 +128,11 @@ static Button b2 = Button{
   .x2 = 2*240/3 - 3,
   .y2 = 160,
   .sprite = nullptr,
+  .bgColor = TFT_BLUE,
+  .textColor = TFT_WHITE,
   .function = end_session,
   // .text = "Test button    "
-  .text = "End            "
+  .text = "End\0           "
 };
 
 static const int buttonCount = 2;
@@ -137,13 +143,13 @@ static int lastWifiStatus = 999;
 void clearScreen(){
     tft->fillScreen(TFT_BLACK);
     tft->setCursor(0, 0);
-    tft->println("Demo program");
 
     for(int i=0; i<buttonCount; i++){
         auto b = buttons[i];
-        b->sprite->fillSprite(TFT_BLUE);
-        b->sprite->setTextColor(TFT_BLACK);
-        b->sprite->setCursor(0, 0);
+        b->sprite->setTextFont(2);
+        b->sprite->fillSprite(b->bgColor);
+        b->sprite->setTextColor(b->textColor, b->bgColor);
+        b->sprite->setCursor(3, 3);
         b->sprite->print(b->text);
         b->sprite->pushSprite(b->x1, b->y1);
     }
@@ -163,10 +169,8 @@ bool insideButton(Button* b, uint16_t x, uint16_t y){
 void handleEvent(uint16_t x, uint16_t y){
     for(int i=0; i<buttonCount; i++){
         auto b = buttons[i];
-        if(insideButton(b, x, y)){
-            if(b->function){
-                b->function();
-            }
+        if(insideButton(b, x, y) && b->function){
+            b->function();
         }
     }
 }
@@ -212,6 +216,7 @@ void setup(){
 
     tft = ttgo->tft;
     tft->setTextFont(2);
+    tft->println("Starting program...");
 
     drv = ttgo->drv;
     ttgo->enableDrv2650();
