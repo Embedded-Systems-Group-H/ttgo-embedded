@@ -14,11 +14,17 @@ static Adafruit_DRV2605* drv = nullptr;
 static BMA* sensor = nullptr;
 static HardwareSerial* GNSS = nullptr;
 
-TFT_eSprite *sprite_Time = nullptr;
-TFT_eSprite *sprite_Location = nullptr;
-TFT_eSprite *sprite_Coordinate = nullptr;
-TFT_eSprite *sprite_StepCount = nullptr;
-TFT_eSprite *sprite_WiFi = nullptr;
+// TFT_eSprite *sprite_Time = nullptr;
+// TFT_eSprite *sprite_Location = nullptr;
+// TFT_eSprite *sprite_Coordinate = nullptr;
+// TFT_eSprite *sprite_StepCount = nullptr;
+// TFT_eSprite *sprite_WiFi = nullptr;
+
+Sprite* sprite_Time = nullptr;
+Sprite* sprite_Location = nullptr;
+Sprite* sprite_Coordinate = nullptr;
+Sprite* sprite_StepCount = nullptr;
+Sprite* sprite_WiFi = nullptr;
 
 static constexpr uint8_t spriteCount = 5;
 static Sprite* g_Sprites[spriteCount];
@@ -174,24 +180,34 @@ void setup(){
     tft->fillScreen(TFT_RED);
     tft->setCursor(0, 0);
 
-    g_Sprites[0] = new Sprite(new TFT_eSprite(tft), )
+    g_Sprites[0] = new Sprite(0, 0*43, 240, 1*43, new TFT_eSprite(tft), TFT_WHITE, TFT_BLACK, 2);
+    g_Sprites[1] = new Sprite(0, 1*43, 240, 2*43, new TFT_eSprite(tft), TFT_WHITE, TFT_BLACK, 2);
+    g_Sprites[2] = new Sprite(0, 2*43, 240, 3*43, new TFT_eSprite(tft), TFT_WHITE, TFT_BLACK, 2);
+    g_Sprites[3] = new Sprite(0, 3*43, 240, 4*43, new TFT_eSprite(tft), TFT_WHITE, TFT_BLACK, 2);
+    g_Sprites[4] = new Sprite(0, 4*43, 240, 5*43, new TFT_eSprite(tft), TFT_WHITE, TFT_BLACK, 2);
 
-    sprite_Time = new TFT_eSprite(tft);
-    sprite_Location = new TFT_eSprite(tft);
-    sprite_Coordinate = new TFT_eSprite(tft);
-    sprite_StepCount = new TFT_eSprite(tft);
-    sprite_WiFi = new TFT_eSprite(tft);
+    // sprite_Time = new TFT_eSprite(tft);
+    // sprite_Location = new TFT_eSprite(tft);
+    // sprite_Coordinate = new TFT_eSprite(tft);
+    // sprite_StepCount = new TFT_eSprite(tft);
+    // sprite_WiFi = new TFT_eSprite(tft);
 
-    sprite_Time->createSprite(120, 24);
-    sprite_Time->setTextFont(2);
-    sprite_Location->createSprite(240, 24);
-    sprite_Location->setTextFont(2);
-    sprite_Coordinate->createSprite(240, 24);
-    sprite_Coordinate->setTextFont(2);
-    sprite_StepCount->createSprite(240, 48);
-    sprite_StepCount->setTextFont(4);
-    sprite_WiFi->createSprite(120, 24);
-    sprite_WiFi->setTextFont(2);
+    sprite_Time = g_Sprites[0];
+    sprite_Location = g_Sprites[1];
+    sprite_Coordinate = g_Sprites[2];
+    sprite_StepCount = g_Sprites[3];
+    sprite_WiFi = g_Sprites[4];
+
+    // sprite_Time->createSprite(120, 24);
+    // sprite_Time->setTextFont(2);
+    // sprite_Location->createSprite(240, 24);
+    // sprite_Location->setTextFont(2);
+    // sprite_Coordinate->createSprite(240, 24);
+    // sprite_Coordinate->setTextFont(2);
+    // sprite_StepCount->createSprite(240, 48);
+    // sprite_StepCount->setTextFont(4);
+    // sprite_WiFi->createSprite(120, 24);
+    // sprite_WiFi->setTextFont(2);
 
     buttons[0] = new Button(10, 100, 240/3 - 3, 160, new TFT_eSprite(tft), "Start", TFT_WHITE, TFT_BLUE, start_session);
     buttons[1] = new Button(10, 100, 240/3 - 3, 160, new TFT_eSprite(tft), "Start", TFT_WHITE, TFT_BLUE, end_session);
@@ -256,11 +272,13 @@ void loop(){
     if (gps->location.isUpdated()) {
         sprintf(gpsBuf, "Location: lat %.6f long %.6f", gps->location.lat(), gps->location.lng());
         
-        sprite_Location->fillSprite(TFT_BLACK);
-        sprite_Location->setTextColor(TFT_GREEN);
-        sprite_Location->setCursor(0, 0);
-        sprite_Location->print(gpsBuf);
-        sprite_Location->pushSprite(0, 43 + 25);
+        sprite_Location->Render(gpsBuf);
+
+        // sprite_Location->fillSprite(TFT_BLACK);
+        // sprite_Location->setTextColor(TFT_GREEN);
+        // sprite_Location->setCursor(0, 0);
+        // sprite_Location->print(gpsBuf);
+        // sprite_Location->pushSprite(0, 43 + 25);
 
         send_gps();
     }
@@ -287,21 +305,23 @@ void loop(){
 
         sprintf(gpsTimeBuf, "Time: %02d:%02d:%02d", hour(), minute(), second());
 
-        sprite_Time->fillSprite(TFT_BLACK);
-        sprite_Time->setTextColor(TFT_RED);
-        sprite_Time->setCursor(0, 0);
-        sprite_Time->print(gpsTimeBuf);
-        sprite_Time->pushSprite(0, 43);
+        // sprite_Time->fillSprite(TFT_BLACK);
+        // sprite_Time->setTextColor(TFT_RED);
+        // sprite_Time->setCursor(0, 0);
+        // sprite_Time->print(gpsTimeBuf);
+        // sprite_Time->pushSprite(0, 43);
+        sprite_Time->Render(gpsTimeBuf);
     }
 
     if (touched) {
         sprintf(buf, "x=%03d  y=%03d", x, y);
 
-        sprite_Coordinate->fillSprite(TFT_BLACK);
-        sprite_Coordinate->setTextColor(TFT_YELLOW);
-        sprite_Coordinate->setCursor(0, 0);
-        sprite_Coordinate->print(buf);
-        sprite_Coordinate->pushSprite(240/3, 240 - 43);
+        // sprite_Coordinate->fillSprite(TFT_BLACK);
+        // sprite_Coordinate->setTextColor(TFT_YELLOW);
+        // sprite_Coordinate->setCursor(0, 0);
+        // sprite_Coordinate->print(buf);
+        // sprite_Coordinate->pushSprite(240/3, 240 - 43);
+        sprite_Coordinate->Render(buf);
     }
 
     if(touchedJustNow){
@@ -340,12 +360,13 @@ void loop(){
         if (sensor->isStepCounter()) {
             session.stepCount = sensor->getCounter();
             sprintf(stepBuf, "Step Count: %05d", session.stepCount);
-            sprite_StepCount->fillSprite(TFT_BLACK);
-            sprite_StepCount->setTextColor(TFT_WHITE);
-            sprite_StepCount->setCursor(0, 0);
-            sprite_StepCount->print(stepBuf);
-            // sprite_StepCount->pushSprite(240/2, 0);
-            sprite_StepCount->pushSprite(0, 0);
+            // sprite_StepCount->fillSprite(TFT_BLACK);
+            // sprite_StepCount->setTextColor(TFT_WHITE);
+            // sprite_StepCount->setCursor(0, 0);
+            // sprite_StepCount->print(stepBuf);
+            // // sprite_StepCount->pushSprite(240/2, 0);
+            // sprite_StepCount->pushSprite(0, 0);
+            sprite_StepCount->Render(stepBuf);
         }
 
         send_step_count();
@@ -356,11 +377,12 @@ void loop(){
         lastWifiStatus = isConnected;
 
         sprintf(wifiBuf, "Wifi status");
-        sprite_WiFi->fillSprite(TFT_BLACK);
-        sprite_WiFi->setTextColor(isConnected ? TFT_GREEN : TFT_RED);
-        sprite_WiFi->setCursor(0, 0);
-        sprite_WiFi->print(wifiBuf);
-        sprite_WiFi->pushSprite(240/2, 43);
+        // sprite_WiFi->fillSprite(TFT_BLACK);
+        // sprite_WiFi->setTextColor(isConnected ? TFT_GREEN : TFT_RED);
+        // sprite_WiFi->setCursor(0, 0);
+        // sprite_WiFi->print(wifiBuf);
+        // sprite_WiFi->pushSprite(240/2, 43);
+        sprite_WiFi->Render(wifiBuf);
     }
 
     // delay(5);
