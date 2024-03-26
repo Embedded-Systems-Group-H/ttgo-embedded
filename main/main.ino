@@ -1,8 +1,10 @@
+#include "lilygo.hpp"
+#include "config.hpp"
+
+#include "button.hpp"
+
 #include <HTTPClient.h>
 #include <WiFi.h>
-#define LILYGO_WATCH_2020_V2
-#include <LilyGoWatch.h>
-#include "config.hpp"
 #include <TimeLib.h>
 
 static TTGOClass* ttgo = nullptr;
@@ -36,57 +38,89 @@ struct{
     int stepCount = 0;
 } session;
 
-struct Button{
-  unsigned x1, y1, x2, y2;
-  TFT_eSprite* sprite;
-  uint16_t bgColor;
-  uint16_t textColor;
-  void(*function)();
-  char text[16];
-};
+// struct Button{
+//   unsigned x1, y1, x2, y2;
+//   TFT_eSprite* sprite;
+//   uint16_t bgColor;
+//   uint16_t textColor;
+//   void(*function)();
+//   char text[16];
+// };
+
+
+
+// static Button b1 = Button{
+//   .x1 = 10,
+//   .y1 = 100,
+//   .x2 = 240/3 - 3,
+//   .y2 = 160,
+//   .sprite = nullptr,
+//   .bgColor = TFT_BLUE,
+//   .textColor = TFT_WHITE,
+//   .function = start_session,
+//   // .text = "Test button    "
+//   .text = "Start\0         "
+// };
+
+// static Button b2 = Button{
+//   .x1 = 240/3 + 3,
+//   .y1 = 100,
+//   .x2 = 2*240/3 - 3,
+//   .y2 = 160,
+//   .sprite = nullptr,
+//   .bgColor = TFT_BLUE,
+//   .textColor = TFT_WHITE,
+//   .function = end_session,
+//   // .text = "Test button    "
+//   .text = "End\0           "
+// };
 
 time_t unixTimestamp() {
     return now();
 }
 
-void http_post(const char* url, const char* data){
+bool http_post(const char* url, const char* data){
     if(WiFi.status() == WL_CONNECTED){
         HTTPClient http;
         http.begin(url);
         int httpResponseCode = http.POST("");
 
-        if (httpResponseCode > 0) {
+        bool success = httpResponseCode > 0;
+        if(success){
             // Serial.print("HTTP Response code:");
             // Serial.println(httpResponseCode);
             // String payload = http.getString();
             // Serial.println(payload);
         }
-        else {
+        else{
             Serial.print("Error code: ");
             Serial.println(httpResponseCode);
         }
         http.end();
+
+        return success;
     }
     else {
         // Serial.println("WiFi Disconnected");
+        return false;
     }
 }
 
 static String sessionId;
 
-void start_session(){
+bool start_session(){
     sessionId = String(unixTimestamp());
     String url = String("http://") + String(SERVER_IP) + String(":") + String(SERVER_PORT) + String("/api/session_start/") + sessionId;
-    http_post(url.c_str(), "");
+    return http_post(url.c_str(), "");
 }
 
-void end_session(){
+bool end_session(){
     String url = String("http://") + String(SERVER_IP) + String(":") + String(SERVER_PORT) + String("/api/session_end/") + sessionId;
     sessionId = "";
-    http_post(url.c_str(), "");
+    return http_post(url.c_str(), "");
 }
 
-void send_gps(){
+bool send_gps(){
     if(sessionId.length() > 0){
         String payload = String("ts=") + unixTimestamp();
         String latitude = String("lat=") + String(gps->location.lat());
@@ -94,8 +128,10 @@ void send_gps(){
         payload = payload + "&" + latitude + "&" + longitude;
         String url = String("http://") + String(SERVER_IP) + String(":") + String(SERVER_PORT) + String("/api/gps/") + sessionId;
         url += String("?") + payload;
-        http_post(url.c_str(), payload.c_str());
+        return http_post(url.c_str(), payload.c_str());
     }
+
+    return false;
 }
 
 void send_step_count(){
@@ -109,34 +145,9 @@ void send_step_count(){
     }
 }
 
-static Button b1 = Button{
-  .x1 = 10,
-  .y1 = 100,
-  .x2 = 240/3 - 3,
-  .y2 = 160,
-  .sprite = nullptr,
-  .bgColor = TFT_BLUE,
-  .textColor = TFT_WHITE,
-  .function = start_session,
-  // .text = "Test button    "
-  .text = "Start\0         "
-};
-
-static Button b2 = Button{
-  .x1 = 240/3 + 3,
-  .y1 = 100,
-  .x2 = 2*240/3 - 3,
-  .y2 = 160,
-  .sprite = nullptr,
-  .bgColor = TFT_BLUE,
-  .textColor = TFT_WHITE,
-  .function = end_session,
-  // .text = "Test button    "
-  .text = "End\0           "
-};
-
 static const int buttonCount = 2;
-static Button* buttons[] = {&b1, &b2};
+static Button* buttons[2] = {nullptr, nullptr};
+// static Button* buttons[] = {&b1, &b2};
 
 static int lastWifiStatus = 999;
 
@@ -146,12 +157,7 @@ void clearScreen(){
 
     for(int i=0; i<buttonCount; i++){
         auto b = buttons[i];
-        b->sprite->setTextFont(2);
-        b->sprite->fillSprite(b->bgColor);
-        b->sprite->setTextColor(b->textColor, b->bgColor);
-        b->sprite->setCursor(3, 3);
-        b->sprite->print(b->text);
-        b->sprite->pushSprite(b->x1, b->y1);
+        b->Render();
     }
 
     sprintf(gpsBuf, "Location: INVALID");
@@ -162,17 +168,12 @@ void clearScreen(){
     sprite_Location->pushSprite(0, 43 + 25);
 }
 
-bool insideButton(Button* b, uint16_t x, uint16_t y){
-    return b->x1 <= x && b->x2 > x && b->y1 <= y && b->y2 > y;
-}
-
-void handleEvent(uint16_t x, uint16_t y){
-    for(int i=0; i<buttonCount; i++){
-        auto b = buttons[i];
-        if(insideButton(b, x, y) && b->function){
-            b->function();
-        }
+bool handleEvent(uint16_t x, uint16_t y){
+    bool result = false;
+    for(int i=0; i<buttonCount && !result; i++){
+        result |= buttons[i]->HandleEvent(x, y);
     }
+    return result;
 }
 
 bool Quectel_L76X_Probe(){
@@ -255,12 +256,43 @@ void setup(){
     sprite_WiFi->createSprite(120, 24);
     sprite_WiFi->setTextFont(2);
 
-    for(int i=0; i<buttonCount; i++){
-        auto b = buttons[i];    
-        b->sprite = new TFT_eSprite(tft);
-        b->sprite->createSprite(b->x2-b->x1, b->y2-b->y1);
-        b->sprite->setTextFont(2);
-    }
+    buttons[0] = new Button(10, 100, 240/3 - 3, 160, new TFT_eSprite(tft), "Start", TFT_WHITE, TFT_BLUE, start_session);
+    buttons[1] = new Button(10, 100, 240/3 - 3, 160, new TFT_eSprite(tft), "Start", TFT_WHITE, TFT_BLUE, start_session);
+
+
+
+// static Button b1 = Button{
+//   .x1 = 10,
+//   .y1 = 100,
+//   .x2 = 240/3 - 3,
+//   .y2 = 160,
+//   .sprite = nullptr,
+//   .bgColor = TFT_BLUE,
+//   .textColor = TFT_WHITE,
+//   .function = start_session,
+//   // .text = "Test button    "
+//   .text = "Start\0         "
+// };
+
+// static Button b2 = Button{
+//   .x1 = 240/3 + 3,
+//   .y1 = 100,
+//   .x2 = 2*240/3 - 3,
+//   .y2 = 160,
+//   .sprite = nullptr,
+//   .bgColor = TFT_BLUE,
+//   .textColor = TFT_WHITE,
+//   .function = end_session,
+//   // .text = "Test button    "
+//   .text = "End\0           "
+// };
+
+    // for(int i=0; i<buttonCount; i++){
+    //     auto b = buttons[i];
+    //     b->sprite = new TFT_eSprite(tft);
+    //     b->sprite->createSprite(b->x2-b->x1, b->y2-b->y1);
+    //     b->sprite->setTextFont(2);
+    // }
 
     pinMode(AXP202_INT, INPUT);
     attachInterrupt(AXP202_INT, []{
