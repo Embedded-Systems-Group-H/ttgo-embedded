@@ -45,22 +45,7 @@ struct Button{
 
 time_t unixTimestamp() {
     return now();
-    struct tm t;
-    // Adjust the year (tm_year is years since 1900)
-    t.tm_year = gps->date.year() - 1900;
-    // Adjust the month (tm_mon is 0-based)
-    t.tm_mon = gps->date.month() - 1;
-    t.tm_mday = gps->date.day();
-    t.tm_hour = gps->time.hour();
-    t.tm_min = gps->time.minute();
-    t.tm_sec = gps->time.second();
-
-    // tm_isdst is Daylight Saving Time flag. If negative, the system will try to figure it out.
-    t.tm_isdst = -1; 
-
-    return mktime(&t);
 }
-
 
 void http_post(const char* url, const char* data){
     if(WiFi.status() == WL_CONNECTED){
