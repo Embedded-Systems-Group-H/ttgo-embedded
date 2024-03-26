@@ -16,10 +16,10 @@ private:
     void clearScreen();
 
     int buttonCount_;
-    Button* buttons_;
+    Button** buttons_;
 
     int spriteCount_;
-    Sprite* sprites_;
+    Sprite** sprites_;
 
     Sprite* spriteTime_ = nullptr;
     Sprite* spriteLocation_ = nullptr;
@@ -33,7 +33,7 @@ private:
     void TouchCallback(uint16_t x, uint16_t y);
     void ButtonCallback();
     void StepCountCallback(uint32_t stepCount);
-    void GpsCallback(double lat, double lng);
+    void GpsCallback(bool isValid, double lat, double lng);
     void WifiStatusCallback(bool isConnected);
     void TimeUpdatedCallback(GpsTime gpsTime);
 

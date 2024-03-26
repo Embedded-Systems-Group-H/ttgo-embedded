@@ -44,7 +44,7 @@ void WatchInterface::Update() {
     touched_ = touched2;
 
     if(gps_->location.isUpdated() && gpsCallback_){
-        gpsCallback_(gps_->location.lat(), gps_->location.lng());
+        gpsCallback_(gps_->location.isValid(), gps_->location.lat(), gps_->location.lng());
     }
 
     bool dateUpdated = gps_->date.isUpdated();

@@ -23,7 +23,7 @@ public:
     void SetTouchCallback(void(*touchCallback)(uint16_t, uint16_t));
     void SetButtonCallback(void(*buttonCallback)());
     void SetStepCountCallback(void(*stepCountCallback)(uint32_t));
-    void SetGpsCallback(void(*gpsCallback)(double, double));
+    void SetGpsCallback(void(*gpsCallback)(bool, double, double));
     void SetWifiStatusCallback(void(*wifiStatusCallback)(bool));
     void SetTimeUpdatedCallback(void(*timeUpdatedCallback)(GpsTime));
     
@@ -51,7 +51,7 @@ private:
     void(*touchCallback_)(uint16_t, uint16_t);
     void(*buttonCallback_)();
     void(*stepCountCallback_)(uint32_t);
-    void(*gpsCallback_)(double, double);
+    void(*gpsCallback_)(bool, double, double);
     void(*wifiStatusCallback_)(bool);
     void(*timeUpdatedCallback_)(GpsTime);
 

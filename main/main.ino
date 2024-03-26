@@ -6,10 +6,8 @@ App* app = nullptr;
 void setup(){
     app = &App::Get();
     app->Init();
-    // delay(1000);
 }
 
 void loop(){
     app->Update();
-    // delay(5);
 }
