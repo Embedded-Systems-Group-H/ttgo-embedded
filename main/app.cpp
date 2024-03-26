@@ -16,12 +16,18 @@ bool App::StartSession(){
     session.sessionId = String(now());
     String url = base_url + String("session_start/") + session.sessionId;
     session.startStepCount = session.latestStepCount;
+    StepCountCallback(session.latestStepCount);
+    buttons_[0]->SetBackgroundColor(TFT_GREEN);
+    buttons_[0]->Render();
+
     return watch_->GetWirelessInterface()->HttpPost(url.c_str());
 }
 
 bool App::EndSession(){
     String url = base_url + String("session_end/") + session.sessionId;
     session.sessionId = "";
+    buttons_[0]->SetBackgroundColor(TFT_BLUE);
+    buttons_[0]->Render();
     return watch_->GetWirelessInterface()->HttpPost(url.c_str());
 }
 
@@ -83,15 +89,15 @@ void App::Init() {
 
     spriteTime_->AddTextPiece("", TFT_WHITE, TFT_BLACK);
     spriteLocation_->AddTextPiece("NO SIGNAL", TFT_RED, TFT_WHITE);
-    spriteStepCount_->AddTextPiece("0000", TFT_BLUE, TFT_WHITE);
+    spriteStepCount_->AddTextPiece("00000", TFT_BLUE, TFT_WHITE);
     spriteWiFi_->AddTextPiece("Disconnected", TFT_GREEN, TFT_BLACK);
 
     buttonCount_ = 3;
     buttons_ = new Button*[buttonCount_];
 
-    buttons_[0] = new Button(10, 170, 240/3 - 3, 230, new TFT_eSprite(tft), "Start", TFT_WHITE, TFT_BLUE, []() -> bool { return g_App->StartSession(); });
-    buttons_[1] = new Button(2*240/3 + 3, 170, 240 - 3, 230, new TFT_eSprite(tft), "End", TFT_WHITE, TFT_BLUE, []() -> bool { return g_App->EndSession(); });
-    buttons_[2] = new Button(240/3 + 3, 170, 2*240/3 - 3, 230, new TFT_eSprite(tft), "Pause", TFT_WHITE, TFT_BLUE, []() -> bool { return g_App->PauseSession(); });
+    buttons_[0] = new Button(10, 170, 240/3 - 3, 230, new TFT_eSprite(tft), "Start", TFT_WHITE, TFT_BLUE, 4, []() -> bool { return g_App->StartSession(); });
+    buttons_[1] = new Button(2*240/3 + 3, 170, 240 - 3, 230, new TFT_eSprite(tft), "End", TFT_WHITE, TFT_BLUE, 4, []() -> bool { return g_App->EndSession(); });
+    buttons_[2] = new Button(240/3 + 3, 170, 2*240/3 - 3, 230, new TFT_eSprite(tft), "Pause", TFT_WHITE, TFT_BLUE, 2, []() -> bool { return g_App->PauseSession(); }, 15);
 
     ClearScreen();
 }
@@ -125,10 +131,10 @@ void App::ButtonCallback() {
 }
 
 void App::StepCountCallback(uint32_t stepCount) {
-    sprintf(buffer, "%05d", stepCount);
+    sprintf(buffer, "%05d", stepCount - session.startStepCount);
     spriteStepCount_->SetText(buffer, 1);
     spriteStepCount_->Render();
-    session.latestStepCount = session.latestStepCount;
+    session.latestStepCount = stepCount;
     if(!paused_)
         SendStepCount(stepCount - session.startStepCount);
 }
@@ -183,6 +189,8 @@ void App::Update() {
 }
 
 bool App::PauseSession() {
-    paused_ != paused_;
-    buttons_[2]->SetText(paused_ ? "Unpause" : "Pause");
+    paused_ = !paused_;
+    buttons_[2]->SetText(paused_ ? "Resume" : "Pause");
+    buttons_[2]->Render();
+    return true;
 }

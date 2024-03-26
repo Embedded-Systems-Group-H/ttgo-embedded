@@ -24,6 +24,7 @@ public:
     void SetText(const char* text, int textPieceIndex = 0);
 
     void AddTextPiece(const char* text, uint16_t fgColor, uint16_t bgColor);
+    void SetBackgroundColor(uint16_t bgColor);
 
 protected:
     uint16_t x1_, y1_, x2_, y2_;

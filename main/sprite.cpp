@@ -43,3 +43,7 @@ void Sprite::AddTextPiece(const char* text, uint16_t fgColor, uint16_t bgColor) 
     textBuffer_.pieces[textBuffer_.textPieceCount] = piece;
     SetText(text, textBuffer_.textPieceCount ++);
 }
+
+void Sprite::SetBackgroundColor(uint16_t bgColor) {
+    bgColor_ = bgColor;    
+}
