@@ -2,6 +2,8 @@
 #include <WiFi.h>
 #define LILYGO_WATCH_2020_V2
 #include <LilyGoWatch.h>
+#include "config.hpp"
+#include <ctime>
 
 static TTGOClass* ttgo = nullptr;
 static TFT_eSPI* tft = nullptr;
@@ -15,6 +17,7 @@ TFT_eSprite *sprite_Time = nullptr;
 TFT_eSprite *sprite_Location = nullptr;
 TFT_eSprite *sprite_Coordinate = nullptr;
 TFT_eSprite *sprite_StepCount = nullptr;
+TFT_eSprite *sprite_WiFi = nullptr;
 
 static bool pmu_irq = false;
 static bool step_irq = false;
@@ -25,6 +28,7 @@ static char buf[128];
 static char gpsBuf[128];
 static char gpsTimeBuf[128];
 static char stepBuf[128];
+static char wifiBuf[128];
 
 struct{
     int stepCount = 0;
@@ -37,14 +41,83 @@ struct Button{
   char text[16];
 };
 
+time_t unixTimestamp() {
+    struct tm t;
+    // Adjust the year (tm_year is years since 1900)
+    t.tm_year = gps->date.year() - 1900;
+    // Adjust the month (tm_mon is 0-based)
+    t.tm_mon = gps->date.month() - 1;
+    t.tm_mday = gps->date.day();
+    t.tm_hour = gps->time.hour();
+    t.tm_min = gps->time.minute();
+    t.tm_sec = gps->time.second();
+
+    // tm_isdst is Daylight Saving Time flag. If negative, the system will try to figure it out.
+    t.tm_isdst = -1; 
+
+    return mktime(&t);
+}
+
+
+void http_post(const char* url, const char* data){
+    if(WiFi.status() == WL_CONNECTED){
+        HTTPClient http;
+        http.begin(url);
+        int httpResponseCode = http.POST("");
+
+        if (httpResponseCode > 0) {
+            // Serial.print("HTTP Response code:");
+            // Serial.println(httpResponseCode);
+            // String payload = http.getString();
+            // Serial.println(payload);
+        }
+        else {
+            Serial.print("Error code: ");
+            Serial.println(httpResponseCode);
+        }
+        http.end();
+    }
+    else {
+        // Serial.println("WiFi Disconnected");
+    }
+}
+
+static String sessionId;
+
 void start_session(){
+    sessionId = String(unixTimestamp());
+    String url = String("http://") + String(SERVER_IP) + String(":") + String(SERVER_PORT) + String("/api/session_start/") + sessionId;
+    http_post(url.c_str(), "");
 }
 
 void end_session(){
+    String url = String("http://") + String(SERVER_IP) + String(":") + String(SERVER_PORT) + String("/api/session_end/") + sessionId;
+    sessionId = "";
+    http_post(url.c_str(), "");
 }
 
-// void send_gps(){
-// }
+void send_gps(){
+    if(sessionId.length() > 0){
+        String payload = String("ts=") + unixTimestamp();
+        String latitude = String("lat=") + String(gps->location.lat());
+        String longitude = String("long=") + String(gps->location.lng());
+        payload = payload + "&" + latitude + "&" + longitude;
+        String url = String("http://") + String(SERVER_IP) + String(":") + String(SERVER_PORT) + String("/api/gps/") + sessionId;
+        url += String("?") + payload;
+        http_post(url.c_str(), payload.c_str());
+    }
+}
+
+void send_step_count(){
+    if(sessionId.length() > 0){
+        String payload = String("ts=") + unixTimestamp();
+        String stepCount = String("count=") + String(session.stepCount);
+        payload = payload + "&" + stepCount;
+        String url = String("http://") + String(SERVER_IP) + String(":") + String(SERVER_PORT) + String("/api/step_count/") + sessionId;
+        url += String("?") + payload;
+        http_post(url.c_str(), payload.c_str());
+    }
+}
 
 static Button b1 = Button{
   .x1 = 10,
@@ -71,6 +144,8 @@ static Button b2 = Button{
 static const int buttonCount = 2;
 static Button* buttons[] = {&b1, &b2};
 
+static int lastWifiStatus = 999;
+
 void clearScreen(){
     tft->fillScreen(TFT_BLACK);
     tft->setCursor(0, 0);
@@ -84,6 +159,13 @@ void clearScreen(){
         b->sprite->print(b->text);
         b->sprite->pushSprite(b->x1, b->y1);
     }
+
+    sprintf(gpsBuf, "Location: INVALID");
+    sprite_Location->fillSprite(TFT_BLACK);
+    sprite_Location->setTextColor(TFT_GREEN);
+    sprite_Location->setCursor(0, 0);
+    sprite_Location->print(gpsBuf);
+    sprite_Location->pushSprite(0, 43 + 25);
 }
 
 bool insideButton(Button* b, uint16_t x, uint16_t y){
@@ -167,8 +249,9 @@ void setup(){
     sprite_Location = new TFT_eSprite(tft);
     sprite_Coordinate = new TFT_eSprite(tft);
     sprite_StepCount = new TFT_eSprite(tft);
+    sprite_WiFi = new TFT_eSprite(tft);
 
-    sprite_Time->createSprite(240, 24);
+    sprite_Time->createSprite(120, 24);
     sprite_Time->setTextFont(2);
     sprite_Location->createSprite(240, 24);
     sprite_Location->setTextFont(2);
@@ -176,6 +259,8 @@ void setup(){
     sprite_Coordinate->setTextFont(2);
     sprite_StepCount->createSprite(240, 48);
     sprite_StepCount->setTextFont(4);
+    sprite_WiFi->createSprite(120, 24);
+    sprite_WiFi->setTextFont(2);
 
     for(int i=0; i<buttonCount; i++){
         auto b = buttons[i];    
@@ -189,9 +274,9 @@ void setup(){
         pmu_irq = true;
     }, FALLING);
 
-    // ttgo->power->adc1Enable(AXP202_BATT_CUR_ADC1 | AXP202_BATT_VOL_ADC1 |
-    //                         AXP202_VBUS_VOL_ADC1 | AXP202_VBUS_CUR_ADC1,
-    //                         true);
+    ttgo->power->adc1Enable(AXP202_BATT_CUR_ADC1 | AXP202_BATT_VOL_ADC1 |
+                            AXP202_VBUS_VOL_ADC1 | AXP202_VBUS_CUR_ADC1,
+                            true);
     ttgo->power->enableIRQ(AXP202_VBUS_REMOVED_IRQ | AXP202_VBUS_CONNECT_IRQ |
                             AXP202_BATT_REMOVED_IRQ | AXP202_BATT_CONNECT_IRQ |
                             AXP202_PEK_LONGPRESS_IRQ | AXP202_PEK_SHORTPRESS_IRQ,
@@ -215,7 +300,14 @@ void setup(){
     sensor->resetStepCounter();
     sensor->enableStepCountInterrupt();
 
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
     clearScreen();
+
+    setenv("TZ", "GMT2", 1);
+    tzset();
+
+    delay(2000);
 }
 
 void loop(){
@@ -245,12 +337,23 @@ void loop(){
         sprite_Location->setTextColor(TFT_GREEN);
         sprite_Location->setCursor(0, 0);
         sprite_Location->print(gpsBuf);
-        sprite_Location->pushSprite(0, 0);
+        sprite_Location->pushSprite(0, 43 + 25);
         // ttgo->tft->drawString(gpsBuf, 10, 80);
+
+        send_gps();
     }
 
     if (gps->time.isUpdated()) {
+        // setTime(gps->time.hour(), gps->time.minute(), gps->time.second(), gps->date.day(), gps->date.month(), gps->date.year());
+        // adjustTime(UTC_offset * SECS_PER_HOUR);
+
+        // Serial.print(gps->date.year());
+        // Serial.print(gps->date.month());
+        // Serial.println(gps->date.day());
+        Serial.println(unixTimestamp());
+
         sprintf(gpsTimeBuf, "Time: %02d:%02d:%02d", gps->time.hour(), gps->time.minute(), gps->time.second());
+        // sprintf(gpsTimeBuf, "%d", gps->time.value());
 
         sprite_Time->fillSprite(TFT_BLACK);
         sprite_Time->setTextColor(TFT_RED);
@@ -314,6 +417,21 @@ void loop(){
             // sprite_StepCount->pushSprite(240/2, 0);
             sprite_StepCount->pushSprite(0, 0);
         }
+
+        send_step_count();
+    }
+
+    auto newStatus = WiFi.status();
+    if(lastWifiStatus != (int)newStatus){
+        lastWifiStatus = newStatus;
+        bool connected = newStatus == WL_CONNECTED;
+
+        sprintf(wifiBuf, "Wifi status");
+        sprite_WiFi->fillSprite(TFT_BLACK);
+        sprite_WiFi->setTextColor(connected ? TFT_GREEN : TFT_RED);
+        sprite_WiFi->setCursor(0, 0);
+        sprite_WiFi->print(wifiBuf);
+        sprite_WiFi->pushSprite(240/2, 43);
     }
 
     // delay(5);
