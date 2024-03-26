@@ -16,7 +16,12 @@ public:
     void Init();
     void Update();
 
+    bool IsScreenOn() const;
+    Wireless* GetWirelessInterface();
     TFT_eSPI* GetTFT();
+
+    void VibrateOnce();
+    void SetScreen(bool turnOn);
 
     void SetTouchCallback(void(*touchCallback)(uint16_t, uint16_t));
     void SetButtonCallback(void(*buttonCallback)());
@@ -25,12 +30,6 @@ public:
     void SetWifiStatusCallback(void(*wifiStatusCallback)(bool));
     void SetTimeUpdatedCallback(void(*timeUpdatedCallback)(GpsTime));
     
-    Wireless* GetWirelessInterface();
-
-    bool IsScreenOn() const;
-    void SetScreen(bool turnOn);
-    void VibrateOnce();
-
 private:
     ~WatchInterface();
 
@@ -46,12 +45,10 @@ private:
     TinyGPSPlus* gps_;
     HardwareSerial* gnss_;
     Wireless wireless_;
-    static bool pmu_irq_;
-    static bool step_irq_;
+
     bool touched_;
     bool touchedJustNow_;
     bool lastWifiStatus_;
-
     GpsTime gpsTime_;
 
     void(*touchCallback_)(uint16_t, uint16_t);
@@ -60,6 +57,9 @@ private:
     void(*gpsCallback_)(double, double);
     void(*wifiStatusCallback_)(bool);
     void(*timeUpdatedCallback_)(GpsTime);
+
+    inline static bool pmu_irq_ = 0;
+    inline static bool step_irq_ = 0;
 
 private:
     WatchInterface();

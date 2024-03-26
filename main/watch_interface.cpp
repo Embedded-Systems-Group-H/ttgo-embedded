@@ -94,12 +94,8 @@ void WatchInterface::Update() {
             rlst =  sensor_->readInterrupt();
         } while (!rlst);
 
-        if(sensor_->isStepCounter()) {
-            auto count = sensor_->getCounter();
-            session_.stepCount = count;
-            if(stepCountCallback_){
-                stepCountCallback_(count);
-            }
+        if(sensor_->isStepCounter() && stepCountCallback_) {
+            stepCountCallback_(sensor_->getCounter());
         }
     }
 
@@ -150,7 +146,7 @@ bool WatchInterface::Quectel_L76X_Probe() {
 }
 
 WatchInterface::WatchInterface() :
-    ttgo_(nullptr), tft_(nullptr), buzzer_(nullptr), drv_(nullptr), sensor_(nullptr), gps_(nullptr), gnss_(nullptr), pmu_irq____(false), step_irq_(false), touched_(false), touchedJustNow_(false), lastWifiStatus_(false), touchCallback_(nullptr), buttonCallback_(nullptr), stepCountCallback_(nullptr), gpsCallback_(nullptr)
+    ttgo_(nullptr), tft_(nullptr), buzzer_(nullptr), drv_(nullptr), sensor_(nullptr), gps_(nullptr), gnss_(nullptr), touched_(false), touchedJustNow_(false), lastWifiStatus_(false), touchCallback_(nullptr), buttonCallback_(nullptr), stepCountCallback_(nullptr), gpsCallback_(nullptr)
 {
 }
 

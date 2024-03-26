@@ -82,7 +82,7 @@ void handleTouch(uint16_t x, uint16_t y){
 
     sprintf(buffer, "x=%03d  y=%03d", x, y);
     sprite_Coordinate->Render(buffer);
-    
+
     watch->VibrateOnce();
 }
 
@@ -127,6 +127,8 @@ void setup(){
     watch->SetButtonCallback(buttonCallback);
     watch->SetStepCountCallback(stepCountCallback);
     watch->SetGpsCallback(gpsCallback);
+    watch->SetWifiStatusCallback(wifiStatusCallback);
+    watch->SetTimeUpdatedCallback(timeUpdateCallback);
 
     auto tft = watch->GetTFT();
     g_Sprites[0] = new Sprite(0, 0*24, 240, 1*24, new TFT_eSprite(tft), TFT_WHITE, TFT_BLACK, 2);
