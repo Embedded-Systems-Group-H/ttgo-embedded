@@ -87,7 +87,7 @@ bool send_step_count(){
     payload = payload + "&" + stepCount;
     String url = base_url + String("step_count/") + sessionId;
     url += String("?") + payload;
-    return http_post(url.c_str(), payload.c_str());
+    return wireless.HttpPost(url.c_str(), payload.c_str());
 }
 
 static const int buttonCount = 2;
@@ -104,11 +104,13 @@ void clearScreen(){
     }
 
     sprintf(gpsBuf, "Location: INVALID");
-    sprite_Location->fillSprite(TFT_BLACK);
-    sprite_Location->setTextColor(TFT_GREEN);
-    sprite_Location->setCursor(0, 0);
-    sprite_Location->print(gpsBuf);
-    sprite_Location->pushSprite(0, 43 + 25);
+    // sprite_Location->fillSprite(TFT_BLACK);
+    // sprite_Location->setTextColor(TFT_GREEN);
+    // sprite_Location->setCursor(0, 0);
+    // sprite_Location->print(gpsBuf);
+    // sprite_Location->pushSprite(0, 43 + 25);
+    // sprite_Location->SetText(gpsBuf);
+    sprite_Location->Render(gpsBuf);
 }
 
 bool handleEvent(uint16_t x, uint16_t y){

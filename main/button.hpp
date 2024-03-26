@@ -14,7 +14,6 @@ public:
 
 protected:
     bool(*function_)();
-    char text_[32];
 };
 
 #endif // __BUTTON_H__

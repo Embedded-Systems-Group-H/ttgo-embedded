@@ -8,8 +8,10 @@ public:
     Sprite(unsigned x1, unsigned y1, unsigned x2, unsigned y2, TFT_eSprite* sprite, uint16_t fgColor, uint16_t bgColor, uint8_t fontsize);
     ~Sprite();
 
-    virtual void Render(const char* text = "");
+    virtual void Render(const char* text);
+    virtual void Render();
     // void SetPosition(uint16_t x, uint16_t y);
+    void SetText(const char* text);
 
 protected:
     unsigned x1_, y1_, x2_, y2_;
@@ -18,6 +20,7 @@ protected:
     uint16_t fgColor_;
     uint8_t fontsize_;
     inline static const int textOffset_[2] = {3, 3};
+    char text_[32];
 };
 
 #endif // __SPRITE_H__

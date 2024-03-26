@@ -12,20 +12,31 @@ Sprite::Sprite(unsigned x1, unsigned y1, unsigned x2, unsigned y2, TFT_eSprite* 
     sprite_->createSprite(x2_ - x1_, y2_ - y1_);
     sprite_->setTextFont(fontsize_);
     sprite_->setTextColor(fgColor_, bgColor_);
+    text_[0] = '\0';
 }
 
 Sprite::~Sprite() {
-    
 }
 
 void Sprite::Render(const char* text) {
     sprite_->fillSprite(bgColor_);
-    if(strlen(text)){
+    sprite_->setCursor(textOffset_[0], textOffset_[1]);
+    sprite_->print(text);
+    sprite_->pushSprite(x1_, y1_);
+}
+
+void Sprite::Render() {
+    sprite_->fillSprite(bgColor_);
+    if(strlen(text_)){
         sprite_->setCursor(textOffset_[0], textOffset_[1]);
-        sprite_->print(text);
+        sprite_->print(text_);
     }
     sprite_->pushSprite(x1_, y1_);
 }
 
 // void Sprite::SetPosition(uint16_t x, uint16_t y) {
 // }
+
+void Sprite::SetText(const char* text) {
+    strncpy(text_, text, (sizeof text) - 1);
+}
