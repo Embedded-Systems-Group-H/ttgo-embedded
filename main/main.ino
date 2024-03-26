@@ -302,7 +302,6 @@ struct{
 void loop(){
     while(GNSS->available()) {
         int r = GNSS->read();
-        // Serial.write(r);
         gps->encode(r);
     }
     
@@ -327,7 +326,6 @@ void loop(){
         sprite_Location->setCursor(0, 0);
         sprite_Location->print(gpsBuf);
         sprite_Location->pushSprite(0, 43 + 25);
-        // ttgo->tft->drawString(gpsBuf, 10, 80);
 
         send_gps();
     }
@@ -351,15 +349,8 @@ void loop(){
     if(datetimeUpdated){
         setTime(gpsTime.hour, gpsTime.minute, gpsTime.second, gpsTime.day, gpsTime.month, gpsTime.year);
         adjustTime(UTC_offset * SECS_PER_HOUR);
-        
-        Serial.print(hour());
-        Serial.print(":");
-        Serial.print(minute());
-        Serial.print(":");
-        Serial.println(second());
 
-        sprintf(gpsTimeBuf, "Time: %02d:%02d:%02d", gpsTime.hour, gpsTime.minute, gpsTime.second);
-        // sprintf(gpsTimeBuf, "%d", gps->time.value());
+        sprintf(gpsTimeBuf, "Time: %02d:%02d:%02d", hour(), minute(), second());
 
         sprite_Time->fillSprite(TFT_BLACK);
         sprite_Time->setTextColor(TFT_RED);
@@ -376,7 +367,6 @@ void loop(){
         sprite_Coordinate->setCursor(0, 0);
         sprite_Coordinate->print(buf);
         sprite_Coordinate->pushSprite(240/3, 240 - 43);
-        // ttgo->tft->drawString(buf, x, y);
     }
 
     if(touchedJustNow){
