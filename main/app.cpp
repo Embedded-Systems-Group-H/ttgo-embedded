@@ -10,12 +10,12 @@ struct{
 
 bool App::StartSession(){
     session.sessionId = String(now());
-    String url = base_url + String("session_start/") + sessionId;
+    String url = base_url + String("session_start/") + session.sessionId;
     return watch_->GetWirelessInterface()->HttpPost(url.c_str());
 }
 
 bool App::EndSession(){
-    String url = base_url + String("session_end/") + sessionId;
+    String url = base_url + String("session_end/") + session.sessionId;
     session.sessionId = "";
     return watch_->GetWirelessInterface()->HttpPost(url.c_str());
 }
@@ -49,15 +49,16 @@ App& App::Get() {
 }
 
 void App::Init() {
-    watch = &WatchInterface::Get();
-    watch_->Init();
-
-    watch_->SetTouchCallback([this](uint16_t x, uint16_t y){ this->TouchCallback(x, y); });
-    watch_->SetButtonCallback([this](){ this->ButtonCallback(); });
-    watch_->SetStepCountCallback([this](uint32_t stepCount){ this->StepCountCallback(stepCount); });
-    watch_->SetGpsCallback([this](double lat, double lng){ this->GpsCallback(lat, lng); });
-    watch_->SetWifiStatusCallback([this](bool isConnected){ this->WifiStatusCallback(isConnected); });
-    watch_->SetTimeUpdatedCallback([this](GpsTime gpsTime){ this->TimeUpdatedCallback(gpsTime); });
+    watch_ = &WatchInterface::Get();
+    if(watch_->Init()){
+        static App* currentApp = this;
+        watch_->SetTouchCallback([](uint16_t x, uint16_t y){ currentApp->TouchCallback(x, y); });
+        watch_->SetButtonCallback([](){ currentApp->ButtonCallback(); });
+        watch_->SetStepCountCallback([](uint32_t stepCount){ currentApp->StepCountCallback(stepCount); });
+        watch_->SetGpsCallback([](double lat, double lng){ currentApp->GpsCallback(lat, lng); });
+        watch_->SetWifiStatusCallback([](bool isConnected){ currentApp->WifiStatusCallback(isConnected); });
+        watch_->SetTimeUpdatedCallback([](GpsTime gpsTime){ currentApp->TimeUpdatedCallback(gpsTime); });
+    }
 
     auto tft = watch_->GetTFT();
     spriteCount_ = 5;
@@ -82,7 +83,6 @@ void App::Init() {
 }
 
 App::App() {
-    
 }
 
 void App::TouchCallback(uint16_t x, uint16_t y) {

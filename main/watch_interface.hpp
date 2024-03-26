@@ -10,7 +10,7 @@ class WatchInterface{
 public:
     static WatchInterface& Get();
 
-    void Init();
+    bool Init();
     void Update();
 
     bool IsScreenOn() const;
@@ -57,6 +57,8 @@ private:
 
     inline static bool pmu_irq_ = 0;
     inline static bool step_irq_ = 0;
+
+    inline static bool isInitialized_ = false;
 
 private:
     WatchInterface();

@@ -4,6 +4,7 @@ static char buffer[128];
 
 WatchInterface& WatchInterface::Get() {
     static WatchInterface watch;
+
     return watch;
 }
 
@@ -211,8 +212,12 @@ void WatchInterface::InitializeHardwareInterfaces() {
     wireless_.Enable();    
 }
 
-void WatchInterface::Init() {
-    InitializeHardwareInterfaces();    
+bool WatchInterface::Init() {
+    if(isInitialized_)
+        return false;
+    
+    InitializeHardwareInterfaces();
+    return true;
 }
 
 Wireless* WatchInterface::GetWirelessInterface(){
