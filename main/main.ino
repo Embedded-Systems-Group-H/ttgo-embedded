@@ -2,9 +2,8 @@
 #include "config.hpp"
 
 #include "button.hpp"
-
-#include <HTTPClient.h>
-#include <WiFi.h>
+#include "sprite.hpp"
+#include "wireless.hpp"
 #include <TimeLib.h>
 
 static TTGOClass* ttgo = nullptr;
@@ -20,6 +19,9 @@ TFT_eSprite *sprite_Location = nullptr;
 TFT_eSprite *sprite_Coordinate = nullptr;
 TFT_eSprite *sprite_StepCount = nullptr;
 TFT_eSprite *sprite_WiFi = nullptr;
+
+static constexpr uint8_t spriteCount = 5;
+static Sprite* g_Sprites[spriteCount];
 
 static bool pmu_irq = false;
 static bool step_irq = false;
@@ -42,76 +44,48 @@ time_t unixTimestamp() {
     return now();
 }
 
-bool http_post(const char* url, const char* data){
-    if(WiFi.status() == WL_CONNECTED){
-        HTTPClient http;
-        http.begin(url);
-        int httpResponseCode = http.POST("");
-
-        bool success = httpResponseCode > 0;
-        if(success){
-            // Serial.print("HTTP Response code:");
-            // Serial.println(httpResponseCode);
-            // String payload = http.getString();
-            // Serial.println(payload);
-        }
-        else{
-            Serial.print("Error code: ");
-            Serial.println(httpResponseCode);
-        }
-        http.end();
-
-        return success;
-    }
-    else {
-        // Serial.println("WiFi Disconnected");
-        return false;
-    }
-}
 
 static String sessionId;
+static String base_url = String("http://") + String(SERVER_IP) + String(":") + String(SERVER_PORT) + String("/api/");
+static Wireless wireless;
 
 bool start_session(){
     sessionId = String(unixTimestamp());
-    String url = String("http://") + String(SERVER_IP) + String(":") + String(SERVER_PORT) + String("/api/session_start/") + sessionId;
-    return http_post(url.c_str(), "");
+    String url = base_url + String("session_start/") + sessionId;
+    return wireless.HttpPost(url.c_str());
 }
 
 bool end_session(){
-    String url = String("http://") + String(SERVER_IP) + String(":") + String(SERVER_PORT) + String("/api/session_end/") + sessionId;
+    String url = base_url + String("session_end/") + sessionId;
     sessionId = "";
-    return http_post(url.c_str(), "");
+    return wireless.HttpPost(url.c_str());
 }
 
 bool send_gps(){
-    if(sessionId.length() > 0){
-        String payload = String("ts=") + unixTimestamp();
-        String latitude = String("lat=") + String(gps->location.lat());
-        String longitude = String("long=") + String(gps->location.lng());
-        payload = payload + "&" + latitude + "&" + longitude;
-        String url = String("http://") + String(SERVER_IP) + String(":") + String(SERVER_PORT) + String("/api/gps/") + sessionId;
-        url += String("?") + payload;
-        return http_post(url.c_str(), payload.c_str());
-    }
-
-    return false;
+    if(sessionId.length() == 0)
+        return false;
+    String payload = String("ts=") + unixTimestamp();
+    String latitude = String("lat=") + String(gps->location.lat());
+    String longitude = String("long=") + String(gps->location.lng());
+    payload = payload + "&" + latitude + "&" + longitude;
+    String url = base_url + String("gps/") + sessionId;
+    url += String("?") + payload;
+    return wireless.HttpPost(url.c_str());
 }
 
-void send_step_count(){
-    if(sessionId.length() > 0){
-        String payload = String("ts=") + unixTimestamp();
-        String stepCount = String("count=") + String(session.stepCount);
-        payload = payload + "&" + stepCount;
-        String url = String("http://") + String(SERVER_IP) + String(":") + String(SERVER_PORT) + String("/api/step_count/") + sessionId;
-        url += String("?") + payload;
-        http_post(url.c_str(), payload.c_str());
-    }
+bool send_step_count(){
+    if(sessionId.length() == 0)
+        return false;
+    String payload = String("ts=") + unixTimestamp();
+    String stepCount = String("count=") + String(session.stepCount);
+    payload = payload + "&" + stepCount;
+    String url = base_url + String("step_count/") + sessionId;
+    url += String("?") + payload;
+    return http_post(url.c_str(), payload.c_str());
 }
 
 static const int buttonCount = 2;
 static Button* buttons[2] = {nullptr, nullptr};
-// static Button* buttons[] = {&b1, &b2};
-
 static int lastWifiStatus = 999;
 
 void clearScreen(){
@@ -199,8 +173,8 @@ void setup(){
 
     tft->fillScreen(TFT_RED);
     tft->setCursor(0, 0);
-    tft->println("Play Audio!");
-    // eSpTime->setTextColor(TFT_GREEN, TFT_BLACK);
+
+    g_Sprites[0] = new Sprite(new TFT_eSprite(tft), )
 
     sprite_Time = new TFT_eSprite(tft);
     sprite_Location = new TFT_eSprite(tft);
@@ -220,42 +194,7 @@ void setup(){
     sprite_WiFi->setTextFont(2);
 
     buttons[0] = new Button(10, 100, 240/3 - 3, 160, new TFT_eSprite(tft), "Start", TFT_WHITE, TFT_BLUE, start_session);
-    buttons[1] = new Button(10, 100, 240/3 - 3, 160, new TFT_eSprite(tft), "Start", TFT_WHITE, TFT_BLUE, start_session);
-
-
-
-// static Button b1 = Button{
-//   .x1 = 10,
-//   .y1 = 100,
-//   .x2 = 240/3 - 3,
-//   .y2 = 160,
-//   .sprite = nullptr,
-//   .bgColor = TFT_BLUE,
-//   .textColor = TFT_WHITE,
-//   .function = start_session,
-//   // .text = "Test button    "
-//   .text = "Start\0         "
-// };
-
-// static Button b2 = Button{
-//   .x1 = 240/3 + 3,
-//   .y1 = 100,
-//   .x2 = 2*240/3 - 3,
-//   .y2 = 160,
-//   .sprite = nullptr,
-//   .bgColor = TFT_BLUE,
-//   .textColor = TFT_WHITE,
-//   .function = end_session,
-//   // .text = "Test button    "
-//   .text = "End\0           "
-// };
-
-    // for(int i=0; i<buttonCount; i++){
-    //     auto b = buttons[i];
-    //     b->sprite = new TFT_eSprite(tft);
-    //     b->sprite->createSprite(b->x2-b->x1, b->y2-b->y1);
-    //     b->sprite->setTextFont(2);
-    // }
+    buttons[1] = new Button(10, 100, 240/3 - 3, 160, new TFT_eSprite(tft), "Start", TFT_WHITE, TFT_BLUE, end_session);
 
     pinMode(AXP202_INT, INPUT);
     attachInterrupt(AXP202_INT, []{
@@ -288,8 +227,7 @@ void setup(){
     sensor->resetStepCounter();
     sensor->enableStepCountInterrupt();
 
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-
+    wireless.Enable();
     clearScreen();
 
     delay(2000);
@@ -309,10 +247,7 @@ void loop(){
     bool touched2 = ttgo->getTouch(x, y);
     touchedJustNow = !touched && touched2;
     touched = touched2;
-    // doClearScreen = doClearScreen || (bool)ttgo->getTouch(x, y);
-    // doClearScreen = doClearScreen || (bool)gps->location.isUpdated();
 
-    // doClearScreen = false;
     if(doClearScreen){
         clearScreen();
         doClearScreen = false;
@@ -416,14 +351,13 @@ void loop(){
         send_step_count();
     }
 
-    auto newStatus = WiFi.status();
-    if(lastWifiStatus != (int)newStatus){
-        lastWifiStatus = newStatus;
-        bool connected = newStatus == WL_CONNECTED;
+    auto isConnected = wireless.IsConnected();
+    if(lastWifiStatus != (int)isConnected){
+        lastWifiStatus = isConnected;
 
         sprintf(wifiBuf, "Wifi status");
         sprite_WiFi->fillSprite(TFT_BLACK);
-        sprite_WiFi->setTextColor(connected ? TFT_GREEN : TFT_RED);
+        sprite_WiFi->setTextColor(isConnected ? TFT_GREEN : TFT_RED);
         sprite_WiFi->setCursor(0, 0);
         sprite_WiFi->print(wifiBuf);
         sprite_WiFi->pushSprite(240/2, 43);

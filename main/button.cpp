@@ -3,23 +3,15 @@
 #include <string.h>
 
 Button::Button(unsigned x1, unsigned y1, unsigned x2, unsigned y2, TFT_eSprite* sprite, const char* text, uint16_t fgColor, uint16_t bgColor, bool(*function)()):
-    x1_(x1), y1_(y1), x2_(x2), y2_(y2),
-    sprite_(sprite),
-    fgColor_(fgColor),
-    bgColor_(bgColor),
+    Sprite(x1, y1, x2, y2, sprite, fgColor, bgColor),
     function_(function)
 {
     strncpy(text_, text, (sizeof text) - 1);
+    sprite_->createSprite(x2_ - x1_, y2_ - y1_);
 }
 
-
 void Button::Render() {
-    sprite_->setTextFont(2);
-    sprite_->fillSprite(bgColor_);
-    sprite_->setTextColor(fgColor_, bgColor_);
-    sprite_->setCursor(offset_[0], offset_[1]);
-    sprite_->print(text_);
-    sprite_->pushSprite(x1_, y1_);    
+    Sprite::Render(text_);
 }
 
 bool Button::HandleEvent(uint16_t x, uint16_t y) {
