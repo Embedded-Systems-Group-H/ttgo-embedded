@@ -9,7 +9,6 @@
 class Wireless{
 public:
     Wireless();
-    ~Wireless();
 
     void Enable();
     void Disable();

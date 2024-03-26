@@ -1,11 +1,8 @@
 #include "wireless.hpp"
 
-
-Wireless::Wireless() {
-}
-
-Wireless::~Wireless() {
-    
+Wireless::Wireless() :
+    enabled_(false)
+{
 }
 
 void Wireless::Enable() {
